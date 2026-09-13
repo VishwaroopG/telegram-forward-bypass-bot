@@ -17,12 +17,27 @@ load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 API_ID = os.getenv("API_ID")
 API_HASH = os.getenv("API_HASH")
+ALLOWED_USERS_ENV = os.getenv("ALLOWED_USERS", "")
 
 if not BOT_TOKEN or not API_ID or not API_HASH:
     print("Please set BOT_TOKEN, API_ID, and API_HASH in your .env file.")
-    print("You can get a BOT_TOKEN from https://t.me/BotFather")
-    print("You can get an API_ID and API_HASH from https://my.telegram.org/apps")
     exit(1)
+
+# Parse allowed users (can be usernames or user IDs separated by comma)
+allowed_users = []
+if ALLOWED_USERS_ENV:
+    for u in ALLOWED_USERS_ENV.split(","):
+        u = u.strip()
+        if u.isdigit():
+            allowed_users.append(int(u))
+        else:
+            allowed_users.append(u.replace("@", ""))
+            
+# Create a filter for allowed users
+if allowed_users:
+    auth_filter = filters.user(allowed_users)
+else:
+    auth_filter = filters.all # If no one is specified, allow everyone for now
 
 # --- Dummy Web Server for Render ---
 web_app = Flask(__name__)
@@ -47,11 +62,19 @@ app = Client(
     bot_token=BOT_TOKEN
 )
 
-# Regex pattern to match Telegram public post links
-# Matches: https://t.me/username/1234 or t.me/username/1234
 LINK_PATTERN = r"(?:https?://)?(?:t\.me|telegram\.me)/(?P<chat_id>[a-zA-Z0-9_]+)/(?P<message_id>\d+)"
 
-@app.on_message(filters.private & filters.text & filters.regex(LINK_PATTERN))
+@app.on_message(filters.private & filters.command("start") & auth_filter)
+async def start_cmd(client, message):
+    await message.reply_text(
+        "👋 **Welcome to the Forward Bypass Bot!**\n\n"
+        "I can help you extract text, images, or videos from restricted public groups.\n\n"
+        "🔗 **How to use me:**\n"
+        "Simply paste a link to a message from a **public** Telegram group/channel "
+        "(e.g., `https://t.me/groupname/1234`), and I'll fetch it for you immediately."
+    )
+
+@app.on_message(filters.private & filters.text & filters.regex(LINK_PATTERN) & auth_filter)
 async def handle_link(client, message):
     match = re.search(LINK_PATTERN, message.text)
     if not match:
@@ -60,11 +83,9 @@ async def handle_link(client, message):
     chat_id = match.group("chat_id")
     message_id = int(match.group("message_id"))
     
-    status_msg = await message.reply_text("Fetching message...")
+    status_msg = await message.reply_text("⏳ Fetching your message...")
     
     try:
-        # Pyrogram's copy_message is perfect for this as it sends a copy 
-        # without the 'Forwarded from' header and bypasses forward restrictions
         await client.copy_message(
             chat_id=message.chat.id,
             from_chat_id=chat_id,
@@ -73,16 +94,11 @@ async def handle_link(client, message):
         await status_msg.delete()
     except Exception as e:
         print(f"Error fetching message: {e}")
-        await status_msg.edit_text(f"Failed to fetch the message. Make sure the group is public and the link is correct.\n\nError: `{e}`")
+        await status_msg.edit_text(f"❌ **Failed to fetch the message.**\nMake sure the group is public and the link is correct.\n\n`Error: {e}`")
 
-@app.on_message(filters.private & filters.command("start"))
-async def start_cmd(client, message):
-    await message.reply_text(
-        "Hello! 👋\n\n"
-        "Send me a link to a message from a **public** Telegram group/channel "
-        "(e.g., `https://t.me/groupname/1234`), and I will extract the content "
-        "(text, image, video) and send it back to you, bypassing forward restrictions."
-    )
+@app.on_message(filters.private & ~auth_filter)
+async def unauthorized(client, message):
+    await message.reply_text("⛔️ **Unauthorized Access**\nYou do not have permission to use this bot.")
 
 if __name__ == "__main__":
     print("Bot is starting...")
