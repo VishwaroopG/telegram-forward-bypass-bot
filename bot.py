@@ -1,5 +1,11 @@
 import os
 import re
+import asyncio
+
+# Fix for newer Python versions (like Python 3.14 on Render)
+loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
+
 from pyrogram import Client, filters
 from dotenv import load_dotenv
 from flask import Flask
