@@ -30,14 +30,20 @@ if ALLOWED_USERS_ENV:
         u = u.strip()
         if u.isdigit():
             allowed_users.append(int(u))
-        else:
-            allowed_users.append(u.replace("@", ""))
+        elif u:
+            allowed_users.append(u.replace("@", "").lower())
             
 # Create a filter for allowed users
 if allowed_users:
-    auth_filter = filters.user(allowed_users)
+    async def _auth_check(_, __, message):
+        if not message.from_user:
+            return False
+        uid = message.from_user.id
+        uname = (message.from_user.username or "").lower()
+        return (uid in allowed_users) or (uname and uname in allowed_users)
+    auth_filter = filters.create(_auth_check)
 else:
-    auth_filter = filters.all # If no one is specified, allow everyone for now
+    auth_filter = filters.all # If no one is specified, allow everyone
 
 # Health endpoint for a persistent Python host.
 web_app = Flask(__name__)
