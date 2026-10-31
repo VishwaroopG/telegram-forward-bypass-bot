@@ -2,3 +2,8 @@
 __pycache__/
 *.pyc
 .session
+*.session*
+node_modules/
+.wrangler/
+.dev.vars*
+.deploy-secrets.json

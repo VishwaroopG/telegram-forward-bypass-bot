@@ -1,0 +1,10 @@
+{
+  "name": "telegram-forward-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "node scripts/deploy.mjs",
+    "check": "node --test"
+  },
+  "devDependencies": { "wrangler": "^4.0.0" }
+}

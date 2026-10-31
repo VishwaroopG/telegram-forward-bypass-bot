@@ -39,27 +39,26 @@ if allowed_users:
 else:
     auth_filter = filters.all # If no one is specified, allow everyone for now
 
-# --- Dummy Web Server for Render ---
+# Health endpoint for a persistent Python host.
 web_app = Flask(__name__)
 
 @web_app.route('/')
 def home():
-    return "Bot is running!"
+    connected = app.is_connected
+    return {"service": "telegram-forward-bot-python", "telegram_connected": connected}, 200 if connected else 503
 
 def run_server():
     port = int(os.environ.get("PORT", 8080))
     web_app.run(host="0.0.0.0", port=port)
 
-# Start the web server in a separate thread
-Thread(target=run_server).start()
-# -----------------------------------
 
 # Initialize the Pyrogram client
 app = Client(
     "forward_bypass_bot",
-    api_id=API_ID,
+    api_id=int(API_ID),
     api_hash=API_HASH,
-    bot_token=BOT_TOKEN
+    bot_token=BOT_TOKEN,
+    in_memory=True
 )
 
 LINK_PATTERN = r"(?:https?://)?(?:t\.me|telegram\.me)/(?P<chat_id>[a-zA-Z0-9_]+)/(?P<message_id>\d+)"
@@ -68,7 +67,7 @@ LINK_PATTERN = r"(?:https?://)?(?:t\.me|telegram\.me)/(?P<chat_id>[a-zA-Z0-9_]+)
 async def start_cmd(client, message):
     await message.reply_text(
         "👋 **Welcome to the Forward Bypass Bot!**\n\n"
-        "I can help you extract text, images, or videos from restricted public groups.\n\n"
+        "I can try to copy text, images, or videos from accessible public groups.\n\n"
         "🔗 **How to use me:**\n"
         "Simply paste a link to a message from a **public** Telegram group/channel "
         "(e.g., `https://t.me/groupname/1234`), and I'll fetch it for you immediately."
@@ -101,5 +100,6 @@ async def unauthorized(client, message):
     await message.reply_text("⛔️ **Unauthorized Access**\nYou do not have permission to use this bot.")
 
 if __name__ == "__main__":
+    Thread(target=run_server, daemon=True).start()
     print("Bot is starting...")
     app.run()

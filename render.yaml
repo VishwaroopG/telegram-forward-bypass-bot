@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: telegram-forward-bot
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: API_ID
+        sync: false
+      - key: API_HASH
+        sync: false
+      - key: ALLOWED_USERS
+        sync: false
