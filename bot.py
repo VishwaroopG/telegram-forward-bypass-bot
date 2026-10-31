@@ -23,8 +23,11 @@ if not BOT_TOKEN or not API_ID or not API_HASH:
     print("Please set BOT_TOKEN, API_ID, and API_HASH in your .env file.")
     exit(1)
 
+# Default admin/owner ID: 824171961
+DEFAULT_ALLOWED_USERS = [824171961]
+
 # Parse allowed users (can be usernames or user IDs separated by comma)
-allowed_users = []
+allowed_users = list(DEFAULT_ALLOWED_USERS)
 if ALLOWED_USERS_ENV:
     for u in ALLOWED_USERS_ENV.split(","):
         u = u.strip()
